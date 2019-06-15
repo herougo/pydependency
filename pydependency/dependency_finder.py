@@ -16,26 +16,35 @@ class DependencyFinder:
     '''
     def __init__(self, config_folder):
         self._config_folder = config_folder
-        self._current_repo = None
+        self._current_repo_name = None
         if not os.path.exists(config_folder):
             os.makedirs(config_folder)
-        self._code_repos = [CodeRepo(config_path) for config_path in get_folder_paths(config_folder)]
+        self._config_code_repo_path = os.path.join(config_folder, 'code_repos')
+        config_code_repo_dirs = [f for f in os.listdir(self._config_code_repo_path)
+                                 if os.path.isdir(os.path.join(config_folder, f))]
+        self._code_repos = {f: CodeRepo(os.path.join(self._config_code_repo_path, f))
+                            for f in config_code_repo_dirs}
         self._default_map = load_json_if_exists(os.path.join(config_folder, 'default.json'))
         self._packages = file_to_lines(os.path.join(config_folder, 'packages.txt'))
 
-    def add_repo(self, base_path):
-        base_name = os.path.basename(base_path)
-        repo_config_path = os.path.join(self._config_folder, base_name)
-        add_directory(repo_config_path)
-        self._code_repos.append(CodeRepo(repo_config_path, base_path))
+    def add_repo(self, repo_path):
+        base_name = os.path.basename(repo_path)
+        repo_config_path = os.path.join(os.path.join(self._config_folder, 'code_repos'), base_name)
+        if not os.path.isdir(repo_config_path):
+            os.makedirs(repo_config_path)
+            self._code_repos[base_name] = CodeRepo(repo_config_path, repo_path)
+        else:
+            # REFACTOR: Ignored for now
+            pass
 
     def set_current_repo(self, repo_path):
-        if self._current_repo == repo_path:
+        base_name = os.path.basename(repo_path)
+        if self._current_repo_name == base_name:
             return
-        self._current_repo = repo_path
+        if base_name not in self._code_repos.keys():
+            self.add_repo(repo_path)
 
-        # ???????
-        pass
+        self._current_repo_name = base_name
 
     def migrate_to_default(self, python_file_path):
         # ?????

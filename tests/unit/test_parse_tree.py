@@ -1,7 +1,5 @@
 '''
-defined_global_variables = [
-    'YU', 'MODIFIED_TWICE', 'MODIFIED_TWICE', 'USED_BY_CLASS_1', 'USED_BY_CLASS_2']
-defined_classes = ['Large', 'Hi', 'Empty', 'UnusedClass']
+
 defined_class_functions = ['Large.adder', 'Large.say_hi']
 defined_functions = ['my_func', 'func', 'unused_func']
 import_statements = [
@@ -37,9 +35,14 @@ from tests.utils import iter_example_files
 
 for path in iter_example_files():
     tree = ParseTreeWrapper(file_path=path)
+    defined_global_variables = ['YU', 'MODIFIED_TWICE', 'MODIFIED_TWICE', 'USED_BY_CLASS_1', 'USED_BY_CLASS_2']
+    defined_classes = ['Large', 'Hi', 'Empty', 'UnusedClass']
     data = {}
     data['class'] = list(iter(tree.iter_global_class_names()))
     data['func'] = list(iter(tree.iter_global_func_names()))
-    data['var'] = list(iter(tree.iter_global_var_names()))
+    data['global_var'] = list(iter(tree.iter_global_var_names()))
     data['import'] = list(iter(tree.iter_global_import()))
+
+    #assert defined_global_variables == data['global_var']
+    #assert defined_classes == data['class']
     print()

@@ -69,10 +69,12 @@ class CodeRepo:
             self._folder_path = folder_path
         #self._code_files = [CodeFile(file_path) for file_path in file_paths]
         # keys are folder_names and leaf values are CodeFile objects
-        self._dict_thing = self._build_dict_thing()
+        self._name_map = self._build_name_map()
         self._relative_import_map = self._build_relative_import_map()
 
-
+    @property
+    def repo_name(self):
+        return os.path.basename(self._folder_path)
 
     def _get_python_file_paths_old(self):
         result = []
@@ -83,22 +85,22 @@ class CodeRepo:
                     result.append(pure_path)
         return result
 
-    def _build_dict_thing(self):
+    def _build_name_map(self):
         result = {}
 
-        def _build_dict_thing_recursion(folder_path, d):
+        def _build_name_map_recursion(folder_path, d):
             for f in os.listdir(folder_path):
                 path = os.path.join(folder_path, f)
                 if os.path.isdir(path):
                     dir_name = os.path.basename(path)
                     if os.path.isfile(os.path.join(path, '__init__.py')):
                         d[dir_name] = {}
-                        self._build_dict_thing(self, path, d[dir_name])
+                        _build_name_map_recursion(path, d[dir_name])
                 elif os.path.isfile(path) and path.endswith('.py'):
                     file_name = os.path.basename(path)
                     d[file_name] = CodeFile(path)
 
-        _build_dict_thing_recursion(self._folder_path, result)
+        _build_name_map_recursion(self._folder_path, result)
 
         return result
 
@@ -133,7 +135,7 @@ class CodeRepo:
                     prefix = '.'.join(prefix_list)
                 for name in getattr(node, func_name)():
                     yield '{}.{}'.format(prefix, name)
-        self._iter_names_recursion([], self._dict_thing)
+        _iter_names_recursion([], self._name_map)
 
     def iter_class_names(self):
         # iter_classdefs
