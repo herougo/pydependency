@@ -34,12 +34,12 @@ df['functions.low_detail_search.main']
 from pydependency.parse_tree import ParseTreeWrapper
 from tests.utils import iter_example_files
 
+
 for path in iter_example_files():
-    tree = ParseTreeWrapper(file_path='')
-    print(list(tree.iter_global_class_names()))
-    print(list(tree.iter_global_func_names()))
-    print(list(tree.iter_global_import()))
-    print(list(tree.iter_global_var_names()))
-    0
-
-
+    tree = ParseTreeWrapper(file_path=path)
+    data = {}
+    data['class'] = list(iter(tree.iter_global_class_names()))
+    data['func'] = list(iter(tree.iter_global_func_names()))
+    data['var'] = list(iter(tree.iter_global_var_names()))
+    data['import'] = list(iter(tree.iter_global_import()))
+    print()
