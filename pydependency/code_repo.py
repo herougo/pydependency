@@ -22,7 +22,7 @@ class AbsoluteImport(Import):
 		return f'import {self.package}'
 	
 class RelativeImport(Import):
-	
+
 	@classmethod
 	def from_str(cls, string):
 		raise NotImplementedError()
@@ -55,6 +55,7 @@ class CodeFile:
 	
 	def iter_imports(self):
 		# iter_imports
+		pass
 
 class CodeRepo:
 	def __init__(self, config_folder, folder_path=None):
@@ -144,6 +145,7 @@ class CodeRepo:
 	
 	def iter_imports(self):
 		# iter_imports
+		pass
 		
 	def get_relative_import_dependencies(self, name):
 		'''

@@ -5,7 +5,7 @@ from pydependency.code_repo import CodeRepo
 class DependencyFinder:
 	'''
 	config_folder folder structure:
-	- folders: representing repos
+	- code_repos/<folder>: folders representing repos
 	- default.json (names go through this first when resolving dependencies; if there 
 	  it is in there, use that; otherwise, try everywhere else)
 	- packages.txt (contains package names (e.g. 'os'))
