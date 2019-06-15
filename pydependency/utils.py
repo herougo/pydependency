@@ -2,9 +2,9 @@ import os
 import json
 
 def load_json_if_exists(path):
-	if not os.path.isfile(path):
-		return {}
-	with open(filename) as f:
+    if not os.path.isfile(path):
+        return {}
+    with open(filename) as f:
         return json.load(f)
 
 def get_folder_paths(directory):

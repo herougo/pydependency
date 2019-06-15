@@ -18,7 +18,7 @@ RECURSIVE_GLOBAL_IGNORE = [
 ]
 
 IMPORTS = [
-	parso.python.tree.Import,
+    parso.python.tree.Import,
     parso.python.tree.ImportFrom,
     parso.python.tree.ImportName
 ]
@@ -65,35 +65,37 @@ NODE_TYPES = [
     parso.python.tree.Scope,
 ]
 
-class ParsoParseTreeWrapper:
-	def __init__(self, file_path, version='3.6'):
-		self._file_path = file_path
-		self._tree = parso.parse(code, version=version)
+class ParseTreeWrapper:
+    def __init__(self, file_path, version='3.6'):
+        self._file_path = file_path
+        with open(file_path) as f:
+            code = str(f.read())
+        self._tree = parso.parse(code, version=version)
 
-	@classmethod
-	def _recursive_iter_nodes(cls, node, look_for, ignore):
-	    if hasattr(n, 'children'):
-            for n2 in n.children:
-            	if not isinstance(n2, ignore):
-                	ParsoParseTreeWrapper._recursive_iter_nodes(n2, look_for, ignore)
+    @classmethod
+    def _recursive_iter_nodes(cls, node, look_for, ignore):
+        if hasattr(node, 'children'):
+            for n2 in node.children:
+                if not isinstance(n2, ignore):
+                    ParseTreeWrapper._recursive_iter_nodes(n2, look_for, ignore)
         else:
-            if isinstance(n, look_for):
-            	yield n
+            if isinstance(node, look_for):
+                yield node
     
-	def iter_global_class_names(self):
-		for node in ParsoParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Class, RECURSIVE_GLOBAL_IGNORE):
-			yield node.name.value, node.start_pos, node.end_pos
-	
-	def iter_global_func_names(self):
-		for node in ParsoParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Function, RECURSIVE_GLOBAL_IGNORE):
-			yield node.name.value, node.start_pos, node.end_pos
-	
-	def iter_global_var_names(self):
-		for node in ParsoParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Name, RECURSIVE_GLOBAL_IGNORE):
-			yield node.name.value, node.start_pos, node.end_pos
-		
-	def iter_global_import(self):
-		for node in ParsoParseTreeWrapper._recursive_iter_nodes(self._tree, IMPORTS, RECURSIVE_GLOBAL_IGNORE):
-			yield ???
+    def iter_global_class_names(self):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Class, RECURSIVE_GLOBAL_IGNORE):
+            yield node.name.value, node.start_pos, node.end_pos
+
+    def iter_global_func_names(self):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Function, RECURSIVE_GLOBAL_IGNORE):
+            yield node.name.value, node.start_pos, node.end_pos
+
+    def iter_global_var_names(self):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Name, RECURSIVE_GLOBAL_IGNORE):
+            yield node.name.value, node.start_pos, node.end_pos
+
+    def iter_global_import(self):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, IMPORTS, RECURSIVE_GLOBAL_IGNORE):
+            yield 0
 
 
