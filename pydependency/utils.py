@@ -1,16 +1,16 @@
 import os
 import json
 
-GIT_REPO_PATH = os.path.abspath(os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),  # pydependency folder
-    os.pardir))
-
 
 def load_json_if_exists(path):
     if not os.path.isfile(path):
         return {}
     with open(path) as f:
         return json.load(f)
+
+def json_dump(obj, file_path):
+    with open(file_path, 'w') as f:
+        json.dump(obj, f)
 
 def get_folder_paths(directory):
     return [os.path.join(directory, f) for f in os.listdir(directory) if os.path.isdir(os.path.join(directory, f))]

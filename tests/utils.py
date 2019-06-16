@@ -1,5 +1,5 @@
 import os
-from pydependency.utils import GIT_REPO_PATH
+from pydependency.config import GIT_REPO_PATH
 
 EXAMPLE_FILES_PATH = os.path.join(os.path.join(GIT_REPO_PATH, 'tests'), 'example_files')
 

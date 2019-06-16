@@ -1,16 +1,12 @@
 import os
 import warnings
-from pydependency.utils import GIT_REPO_PATH, file_to_lines
+from pydependency.utils import file_to_lines
 from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper
 from pydependency.code_repo import CodeRepo
+from pydependency.config import (CONFIG_CODE_REPOS_PATH, CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH, CONFIG_MIGRATE_FROM_PATH)
 
-CONFIG_PATH = os.path.join(GIT_REPO_PATH, 'config')
-CONFIG_CODE_REPOS_PATH = os.path.join(CONFIG_PATH, 'code_repos')
-CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH = os.path.join(CONFIG_PATH, 'default_import_mappings')
-CONFIG_MIGRATE_FROM_PATH = os.path.join(CONFIG_PATH, 'migrate_from')
 ABSOLUTE_PREFIX = 'absolute_'
 RELATIVE_PREFIX = 'relative_'
-
 
 class ConfigProcessor:
     '''
@@ -37,7 +33,7 @@ class ConfigProcessor:
     @classmethod
     def _iter_used_tsv_rows(cls, prefix):
         for f in os.listdir(CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH):
-            path = os.path.join(path, f)
+            path = os.path.join(CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH, f)
             if os.path.isfile(path) and f.endswith('.tsv') and f.startswith(prefix):
                 matrix = cls._tsv_to_matrix(path)
                 for row in matrix:
@@ -147,6 +143,6 @@ class ConfigProcessor:
         '''
         config_code_repo_dirs = [f for f in os.listdir(CONFIG_CODE_REPOS_PATH)
                                  if os.path.isdir(os.path.join(CONFIG_CODE_REPOS_PATH, f))]
-        code_repos_map = {f: CodeRepo(os.path.join(CONFIG_CODE_REPOS_PATH, f))
+        code_repos_map = {f: CodeRepo(os.path.join(CONFIG_CODE_REPOS_PATH, f), rebuild=False)
                           for f in config_code_repo_dirs}
         return code_repos_map

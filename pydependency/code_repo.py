@@ -1,8 +1,8 @@
 import collections
 import os
 from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper, RelativeImportWrapper
-from pydependency.utils import load_json_if_exists, file_to_lines, LineNumberTracker
-
+from pydependency.utils import load_json_if_exists, file_to_lines, LineNumberTracker, json_dump
+from pydependency.config import CONFIG_CODE_REPOS_PATH
 
 class CodeFile:
     '''
@@ -10,7 +10,7 @@ class CodeFile:
     '''
     def __init__(self, file_path):
         self._file_path = file_path
-        self._tree = ParseTreeWrapper(file_path)
+        self._tree = ParseTreeWrapper(file_path, need_unused_names=False)
         self._line_number_tracker = LineNumberTracker()
 
         # self._segmentation contains lines and import classes
@@ -69,6 +69,12 @@ class CodeFile:
         for x in self._tree.iter_global_var_names():
             yield x
 
+    def iter_global_names(self):
+        iters = [self.iter_global_var_names(), self.iter_global_func_names(), self.iter_global_class_names()]
+        for it in iters:
+            for x in it:
+                yield x
+
     def iter_global_import(self):
         for x in self._tree.iter_global_import():
             yield x
@@ -91,22 +97,57 @@ class CodeFile:
         with open(self._file_path, 'w') as f:
             f.write(new_code)
 
+REPO_NAME = 'repo_name'
+FOLDER_PATH = 'folder_path'
+
+
 class CodeRepo:
-    def __init__(self, config_folder, folder_path=None):
-        if folder_path is None:
-            self._config = load_json_if_exists(os.path.join(config_folder, 'config.json'))
-            self._folder_path = self._config['folder_path']
+    def __init__(self, config_folder, rebuild=True):
+        self._config_json_path = os.path.join(config_folder, 'config.json')
+        self._relative_import_map_path = os.path.join(config_folder, 'relative_import_map.json')
+        self._absolute_import_set_path = os.path.join(config_folder, 'absolute_import_set.json')
+
+        self._config_path = config_folder
+        self._config = load_json_if_exists(self._config_json_path)
+
+        folder_path = self._config.get(FOLDER_PATH)
+        if folder_path is None or not rebuild:
+            self._name_map = {}
+            self._relative_import_map = load_json_if_exists(self._relative_import_map_path)
+            self._absolute_import_set = set(load_json_if_exists(self._absolute_import_set_path))
         else:
-            self._folder_path = folder_path
-        #self._code_files = [CodeFile(file_path) for file_path in file_paths]
-        # keys are folder_names and leaf values are CodeFile objects
+            # REFACTOR: not recompute from scratch?
+            self._build(folder_path)
+
+    def _build(self, folder_path):
+        self._config[FOLDER_PATH] = folder_path
+        self._config[REPO_NAME] = os.path.basename(self._config_path)
         self._name_map = self._build_name_map()
         self._relative_import_map = self._build_relative_import_map(self._name_map)
         self._absolute_import_set = self._build_absolute_import_set()
 
+    def save_config(self):
+        if not os.path.isdir(self._config_path):
+            os.makedirs(self._config_path)
+        json_dump(self._config, self._config_json_path)
+        json_dump(self._relative_import_map, self._relative_import_map_path)
+        json_dump(list(self._absolute_import_set), self._absolute_import_set_path)
+
+    @classmethod
+    def load_from_repo_path(cls, repo_path):
+        base_name = os.path.basename(repo_path)
+        repo_config_path = os.path.join(CONFIG_CODE_REPOS_PATH, base_name)
+        code_repo = CodeRepo(repo_config_path)
+        code_repo._build(repo_path)
+        return code_repo
+
     @property
     def repo_name(self):
-        return os.path.basename(self._folder_path)
+        return self._config.get(REPO_NAME)
+
+    @property
+    def folder_path(self):
+        return self._config.get(FOLDER_PATH)
 
     def _build_name_map(self):
         '''
@@ -127,7 +168,7 @@ class CodeRepo:
                     file_name = os.path.basename(path)
                     d[file_name] = CodeFile(path)
 
-        _build_name_map_recursion(self._folder_path, result)
+        _build_name_map_recursion(self.folder_path, result)
 
         return result
 
@@ -147,8 +188,8 @@ class CodeRepo:
                     prefix = '.'.join(prefix_list[:-1])
                 else:
                     prefix = '.'.join(prefix_list)
-                for name in node.iter_names():
-                    self._relative_import_map[name].append(prefix)
+                for node_wrapper in node.iter_global_names():
+                    result[node_wrapper.name].append(prefix)
 
         _build_map_recursion([], name_map)
 
@@ -156,8 +197,8 @@ class CodeRepo:
 
     def _build_absolute_import_set(self):
         result = set()
-        for f in os.listdir(self._folder_path):
-            path = os.path.join(self._folder_path, f)
+        for f in os.listdir(self.folder_path):
+            path = os.path.join(self.folder_path, f)
             if os.path.isdir(path):
                 dir_name = os.path.basename(path)
                 if os.path.isfile(os.path.join(path, '__init__.py')):

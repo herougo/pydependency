@@ -1,7 +1,7 @@
 import parso
 import jedi
 import warnings
-from pydependency.config import PYTHON_VERSION, MAX_LINE_LEN
+from pydependency.config import PYTHON_VERSION, MAX_LINE_LEN, PYTHON_SPACING
 
 RECURSIVE_GLOBAL_IMPORT_IGNORE = (
     parso.python.tree.Function,
@@ -71,8 +71,12 @@ NODE_TYPES = (
     parso.python.tree.Scope
 )
 
+NODE_WRAPPER_SUPPORTED = (
+    parso.python.tree.Function,
+    parso.python.tree.Class,
+    parso.python.tree.Name
+)
 
-#PYTHON_SPACING = ' ' * 4
 
 '''
 if isinstance(node, parso.python.tree.ImportFrom):
@@ -116,6 +120,8 @@ class NodeWrapper:
 
     @classmethod
     def from_parso_node(cls, node):
+        if not isinstance(node, NODE_WRAPPER_SUPPORTED):
+            raise NotImplementedError()
         result = NodeWrapper()
         result.name = node.value if isinstance(node, parso.python.tree.Name) else node.name.value
         result.start_pos = NodeWrapper.fix_pos(node.start_pos)
@@ -204,7 +210,7 @@ class RelativeImportWrapper(ImportWrapper):
         expected_prefix_len = len(self._import_location) + 13
         expected_normal_suffix_len = sum([len(name) for name in self._names]) + 2 * (len(self._names) - 1)
         if expected_prefix_len + expected_normal_suffix_len <= MAX_LINE_LEN:
-            return 'import {} from {}'.format(self._import_location, ','.join(self._names))
+            return 'from {} import {}'.format(self._import_location, ','.join(self._names))
         first_line_with_one_name_len = expected_prefix_len + len(self._names[0]) + 1
 
         if expected_prefix_len / MAX_LINE_LEN >= 0.75 or first_line_with_one_name_len > MAX_LINE_LEN:
@@ -260,14 +266,14 @@ class ParseTreeWrapper:
             self._tree = parso.parse(code, version=version)
 
     @classmethod
-    def _recursive_iter_nodes(cls, node, look_for, ignore, depth=0):
+    def _recursive_iter_nodes(cls, node, predicate_fn, ignore, depth=0):
         # print('_recursive_iter_nodes', depth, type(node), isinstance(node, look_for))
         if hasattr(node, 'children'):
             for n2 in node.children:
-                if isinstance(n2, look_for):
+                if predicate_fn(n2):
                     yield n2
                 if not isinstance(n2, ignore):
-                    for node2 in ParseTreeWrapper._recursive_iter_nodes(n2, look_for, ignore, depth=depth+1):
+                    for node2 in ParseTreeWrapper._recursive_iter_nodes(n2, predicate_fn, ignore, depth=depth+1):
                         yield node2
 
     @classmethod
@@ -287,21 +293,21 @@ class ParseTreeWrapper:
                 result.append(n1)
 
         return result
-    
+
     def iter_global_class_names(self):
-        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Class, RECURSIVE_GLOBAL_IGNORE):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, ParseTreeWrapper.is_class_node, RECURSIVE_GLOBAL_IGNORE):
             yield NodeWrapper.from_parso_node(node)
 
     def iter_global_func_names(self):
-        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Function, RECURSIVE_GLOBAL_IGNORE):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, ParseTreeWrapper.is_func_node, RECURSIVE_GLOBAL_IGNORE):
             yield NodeWrapper.from_parso_node(node)
 
     def iter_global_var_names(self):
-        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Name, RECURSIVE_GLOBAL_IGNORE):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, ParseTreeWrapper.is_name_node, RECURSIVE_GLOBAL_IGNORE):
             yield NodeWrapper.from_parso_node(node)
 
     def iter_global_import(self):
-        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, IMPORTS, RECURSIVE_GLOBAL_IGNORE):
+        for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, ParseTreeWrapper.is_import_node, RECURSIVE_GLOBAL_IGNORE):
             for child in node.children:
                 assert not (isinstance(child, parso.python.tree.Operator) and child.value == ',')  # e.g. import os, sys
 
@@ -388,3 +394,19 @@ class ParseTreeWrapper:
                 result.append((name, NodeWrapper.fix_pos(start_pos), NodeWrapper.fix_pos(end_pos)))
 
         return result
+
+    @classmethod
+    def is_class_node(cls, node):
+        return isinstance(node, parso.python.tree.Class)
+
+    @classmethod
+    def is_func_node(cls, node):
+        return isinstance(node, parso.python.tree.Function) and node.type == 'funcdef'
+
+    @classmethod
+    def is_name_node(cls, node):
+        return isinstance(node, parso.python.tree.Name)
+
+    @classmethod
+    def is_import_node(cls, node):
+        return isinstance(node, IMPORTS)
