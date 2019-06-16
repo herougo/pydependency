@@ -132,23 +132,35 @@ class ImportWrapper(NodeWrapper):
 
 
 class AbsoluteImportWrapper(ImportWrapper):
-    def __init__(self, import_location, original_code_string, start_pos, end_pos):
+    def __init__(self, import_location, original_code_string=None, start_pos=None, end_pos=None):
         self._import_location = import_location
         self._original_code_string = original_code_string
         self.start_pos = start_pos
         self.end_pos = end_pos
+
+    @property
+    def import_location(self):
+        return self._import_location
 
     def __str__(self):
         return 'import {}'.format(self._import_location)
 
 
 class RelativeImportWrapper(ImportWrapper):
-    def __init__(self, import_location, names, original_code_string, start_pos, end_pos):
+    def __init__(self, import_location, names, original_code_string=None, start_pos=None, end_pos=None):
         self._import_location = import_location
         self._names = names
         self._original_code_string = original_code_string
         self.start_pos = start_pos
         self.end_pos = end_pos
+
+    @property
+    def names(self):
+        return self._names
+
+    @property
+    def import_location(self):
+        return self._import_location
 
     def __str__(self):
         # ??? Comment
@@ -241,11 +253,11 @@ class ParseTreeWrapper:
 
     def iter_global_func_names(self):
         for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Function, RECURSIVE_GLOBAL_IGNORE):
-            yield {'name': node.name.value, 'start_pos': node.start_pos, 'end_pos': node.end_pos}
+            yield NodeWrapper.from_parso_node(node)
 
     def iter_global_var_names(self):
         for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, parso.python.tree.Name, RECURSIVE_GLOBAL_IGNORE):
-            yield {'name': node.name.value, 'start_pos': node.start_pos, 'end_pos': node.end_pos}
+            yield NodeWrapper.from_parso_node(node)
 
     def iter_global_import(self):
         for node in ParseTreeWrapper._recursive_iter_nodes(self._tree, IMPORTS, RECURSIVE_GLOBAL_IGNORE):

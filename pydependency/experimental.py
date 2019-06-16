@@ -71,8 +71,6 @@ def get_used_names(t):
                             
                             
                 names.append(('.'.join(name_parts), n.start_pos, end_pos))
-    for n in t.children:
-        recursive_step(n)
     return names
 
 if __name__ == '__main__':
@@ -85,3 +83,6 @@ if __name__ == '__main__':
         if name.split('.')[0] not in completions:
             print '***', name, start_pos, end_pos
             print '\n'.join(lines[start_pos[0] - 3: start_pos[0] + 3])
+
+
+

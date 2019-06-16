@@ -1,24 +1,51 @@
 import collections
 import os
-from pydependency.parse_tree import ParseTreeWrapper
-from pydependency.utils import load_json_if_exists, file_to_lines
+from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper
+from pydependency.utils import load_json_if_exists, file_to_lines, LineNumberTracker
 
 
 class CodeFile:
+    '''
+    WARNING: start_pos and end_pos are not reliable if you modified the file.
+    '''
     def __init__(self, file_path):
         self._file_path = file_path
         self._tree = ParseTreeWrapper(file_path)
-        self._lines = file_to_lines(file_path)
-        self._line_segmentation = self._segment_code()
+        self._line_number_tracker = LineNumberTracker()
 
-    def _segment_code(self):
-        pass
+        # self._segmentation contains lines and import classes
+        self._segmentation, self._import_map = self._build_code_segmentation_structure()
+
+    def _build_code_segmentation_structure(self):
+        # REFACTOR PERFORMANCE: use better data structure than a list
+        segmentation = file_to_lines(self._file_path)
+        import_map = {}
+        for node in self.iter_global_import():
+            if isinstance(node, AbsoluteImportWrapper):
+                import_map[node.import_location] = node
+            else:
+                for name in node.names:
+                    import_map[name] = node
+
+            start = self._line_number_tracker.transform(node.start_pos[0])
+            end = self._line_number_tracker.transform(node.end_pos[0])
+            self._line_number_tracker.remove_lines(start, end)
+            del segmentation[start:end]  # pop elements in the start:end range
+            self._line_number_tracker.add_lines(start, start + 1)
+            segmentation.insert(start, node)
+        return segmentation, import_map
+
 
     def add_import_from(self, import_location, name):
-        pass
+        if import_location in self._import_map.keys():
+            self._import_map[import_location].add_name(name)
+
 
     def add_import(self, import_location):
-        pass
+        if import_location in self._import_map.keys():
+            return
+        self._segmentation.push(0, AbsoluteImportWrapper(import_location))
+
 
     def iter_global_class_names(self):
         for x in self._tree.iter_global_class_names():
@@ -36,8 +63,20 @@ class CodeFile:
         for x in self._tree.iter_global_import():
             yield x
 
+    def get_global_names(self):
+        return {
+            'classes': list(sorted(iter(self.iter_global_class_names()))),
+            'functions': list(sorted(iter(self.iter_global_func_names()))),
+            'variables': list(sorted(iter(self.iter_global_var_names())))
+        }
+
     def iter_undefined_names(self):
         raise NotImplementedError()
+
+    def save(self):
+        new_code = '\n'.join([str(segment) for segment in self._segmentation])
+        with open(self._file_path, 'w') as f:
+            f.write(new_code)
 
 class CodeRepo:
     def __init__(self, config_folder, folder_path=None):
