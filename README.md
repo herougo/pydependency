@@ -5,7 +5,7 @@ A repo (and sublime plugin) for automatically extracting missing python depencie
 
 # To Do
 
-- [ ] Detect undefined variables
+- [x] Detect undefined variables
 - [ ] Finish core code
 - [ ] Finish Sublime Text plugin
 - [ ] Work on plugin Performance
@@ -14,4 +14,6 @@ A repo (and sublime plugin) for automatically extracting missing python depencie
 - [ ] Transform relative imports into absolute
 - [ ] Transform import * into specific relative import
 - [ ] Edge cases:
+  - [ ] as keyword in relative imports
   - [ ] global variables used as default function parameter values
+  - [ ] handle import statements in if blocks

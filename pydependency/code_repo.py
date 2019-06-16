@@ -1,6 +1,6 @@
 import collections
 import os
-from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper
+from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper, RelativeImportWrapper
 from pydependency.utils import load_json_if_exists, file_to_lines, LineNumberTracker
 
 
@@ -36,15 +36,25 @@ class CodeFile:
         return segmentation, import_map
 
 
+    def add_import_to_top(self, import_location):
+        if import_location in self._import_map.keys():
+            return
+        self._segmentation.push(0, AbsoluteImportWrapper(import_location))
+
+
+    def add_import_from_to_top(self, import_location, names):
+        if (import_location in self._import_map.keys() and
+                all([name in self._import_map[import_location].names for name in names])):
+            return
+        self._segmentation.push(0, RelativeImportWrapper(import_location, names))
+
+
     def add_import_from(self, import_location, name):
         if import_location in self._import_map.keys():
             self._import_map[import_location].add_name(name)
 
-
     def add_import(self, import_location):
-        if import_location in self._import_map.keys():
-            return
-        self._segmentation.push(0, AbsoluteImportWrapper(import_location))
+        self.add_import_to_top(import_location)
 
 
     def iter_global_class_names(self):

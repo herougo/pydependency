@@ -1,6 +1,7 @@
 import parso
 import jedi
 import warnings
+from pydependency.config import PYTHON_VERSION, MAX_LINE_LEN
 
 RECURSIVE_GLOBAL_IMPORT_IGNORE = (
     parso.python.tree.Function,
@@ -72,7 +73,6 @@ NODE_TYPES = (
 
 
 #PYTHON_SPACING = ' ' * 4
-MAX_LINE_LEN = 100
 
 '''
 if isinstance(node, parso.python.tree.ImportFrom):
@@ -132,7 +132,7 @@ class ImportWrapper(NodeWrapper):
         elif isinstance(node, parso.python.tree.ImportName):
             dotted_name_node = node.children[1]
             import_location = dotted_name_node.get_code()
-            return AbsoluteImportWrapper(import_location, original_code_string, start_pos, end_pos)
+            return AbsoluteImportWrapper(import_location, original_code_string, start_pos, end_pos, as_name)
         else:
             raise NotImplementedError()
 
@@ -141,8 +141,9 @@ class ImportWrapper(NodeWrapper):
 
 
 class AbsoluteImportWrapper(ImportWrapper):
-    def __init__(self, import_location, original_code_string=None, start_pos=None, end_pos=None):
+    def __init__(self, import_location, original_code_string=None, start_pos=None, end_pos=None, as_name=None):
         self._import_location = import_location
+        self._as_name = as_name
         self._original_code_string = original_code_string
         self.start_pos = start_pos
         self.end_pos = end_pos
@@ -151,11 +152,21 @@ class AbsoluteImportWrapper(ImportWrapper):
     def import_location(self):
         return self._import_location
 
+    @property
+    def as_name(self):
+        return self._as_name
+
+    @property
+    def used_name(self):
+        return self._as_name if self._as_name is None else self._import_location
+
     def __str__(self):
-        return 'import {}'.format(self._import_location)
+        suffix = '' if self._as_name is None else ' as {}'.format(self._as_name)
+        return 'import {}{}'.format(self._import_location, suffix)
 
 
 class RelativeImportWrapper(ImportWrapper):
+    # REFACTOR: handle as
     def __init__(self, import_location, names, original_code_string=None, start_pos=None, end_pos=None):
         self._import_location = import_location
         self._names = names
@@ -221,13 +232,16 @@ class RelativeImportWrapper(ImportWrapper):
 
 
 class ParseTreeWrapper:
-    def __init__(self, file_path, version='3.6'):
+    def __init__(self, file_path, version=PYTHON_VERSION, need_unused_names=True):
         self._file_path = file_path
         with open(file_path) as f:
             code = str(f.read())
-        self._jedi_interpreter = jedi.api.Interpreter(code, [{}])
-        self._tree = self._jedi_interpreter._module_node
-        # self._tree = parso.parse(code, version=version)
+        if need_unused_names:
+            self._jedi_interpreter = jedi.api.Interpreter(code, [{}])
+            self._tree = self._jedi_interpreter._module_node
+        else:  # lightweight version
+            self._jedi_interpreter = None
+            self._tree = parso.parse(code, version=version)
 
     @classmethod
     def _recursive_iter_nodes(cls, node, look_for, ignore, depth=0):
