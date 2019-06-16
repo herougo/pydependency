@@ -1,64 +1,43 @@
 import collections
 import os
 from pydependency.parse_tree import ParseTreeWrapper
-from pydependency.utils import load_json_if_exists
-
-PYTHON_SPACING = ' ' * 4
-MAX_LINE_LEN = 100
-
-class Import:
-    @classmethod
-    def from_str(cls, string):
-        raise NotImplementedError()
-
-    def __str__(self):
-        raise NotImplementedError()
-
-
-class AbsoluteImport(Import):
-
-    @classmethod
-    def from_str(cls, string):
-        raise NotImplementedError()
-
-    def __str__(self):
-        return 'import {}'.format(self.package)
-
-class RelativeImport(Import):
-
-    @classmethod
-    def from_str(cls, string):
-        raise NotImplementedError()
-
-    def __str__(self):
-        expected_prefix_len = len(self.package) + 13
-        expected_normal_suffix_len = sum([len(name) for name in self.names]) + 2 * (len(self.names) - 1)
-
-        if expected_prefix_len + expected_normal_suffix_len <= MAX_LINE_LEN:
-            return 'import {} from {}'.format(self.package, ','.join(self.names))
-        elif expected_prefix_len / MAX_LINE_LEN >= 0.75:
-            NotImplementedError()
+from pydependency.utils import load_json_if_exists, file_to_lines
 
 
 class CodeFile:
     def __init__(self, file_path):
         self._file_path = file_path
         self._tree = ParseTreeWrapper(file_path)
+        self._lines = file_to_lines(file_path)
+        self._line_segmentation = self._segment_code()
 
-    def iter_class_names(self):
-        # iter_classdefs
-        self._iter_names('iter_class_names')
+    def _segment_code(self):
+        pass
 
-    def iter_function_names(self):
-        # iter_funcdefs
-        self._iter_names('iter_function_names')
+    def add_import_from(self, import_location, name):
+        pass
+
+    def add_import(self, import_location):
+        pass
+
+    def iter_global_class_names(self):
+        for x in self._tree.iter_global_class_names():
+            yield x
+
+    def iter_global_func_names(self):
+        for x in self._tree.iter_global_func_names():
+            yield x
 
     def iter_global_var_names(self):
-        self._iter_names('iter_global_var_names')
+        for x in self._tree.iter_global_var_names():
+            yield x
 
-    def iter_imports(self):
-        # iter_imports
-        pass
+    def iter_global_import(self):
+        for x in self._tree.iter_global_import():
+            yield x
+
+    def iter_undefined_names(self):
+        raise NotImplementedError()
 
 class CodeRepo:
     def __init__(self, config_folder, folder_path=None):
