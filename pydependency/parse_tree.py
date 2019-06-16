@@ -96,16 +96,23 @@ class NodeWrapper:
 
     @classmethod
     def fix_pos(cls, pos):
+        # parso pos line numbers start at 1 and NodeWrapper starts at 0
         r, c = pos
         return r - 1, c
 
     @classmethod
+    def unfix_pos(cls, pos):
+        r, c = pos
+        return r + 1, c
+
+    @classmethod
     def from_parso_node(cls, node):
         result = NodeWrapper()
-        result.name = node.name.value
+        result.name = node.value if isinstance(node, parso.python.tree.Name) else node.name.value
         result.start_pos = NodeWrapper.fix_pos(node.start_pos)
         result.end_pos = NodeWrapper.fix_pos(node.end_pos)
         result.type = node.type
+        return result
 
 
 class ImportWrapper(NodeWrapper):
@@ -291,7 +298,9 @@ class ParseTreeWrapper:
                     ignore.add(0)
                     ignore.add(1)
 
-                    # ignore function parameters
+                # ignore function parameters
+                # TODO: Edge case of using default parameter values
+                if isinstance(n, parso.python.tree.PythonNode) and n.type == 'parameters':
                     return
 
                 # ignore assignments
@@ -331,7 +340,7 @@ class ParseTreeWrapper:
                             name_parts.extend([n1.value])
                             end_pos = n1.end_pos
 
-                    names.append(('.'.join(name_parts), n.start_pos, end_pos))
+                    names.append(('.'.join(name_parts), NodeWrapper.fix_pos(n.start_pos), NodeWrapper.fix_pos(end_pos)))
 
         recursive_step(self._tree)
 
@@ -343,9 +352,9 @@ class ParseTreeWrapper:
 
         names = self.get_used_names()
         for name, start_pos, end_pos in names:
-            self._jedi_interpreter._pos = start_pos
+            self._jedi_interpreter._pos = NodeWrapper.unfix_pos(start_pos)
             completions = [c._name.string_name for c in self._jedi_interpreter.completions()]
             if name.split('.')[0] not in completions:
-                result.append((name, start_pos, end_pos))
+                result.append((name, NodeWrapper.fix_pos(start_pos), NodeWrapper.fix_pos(end_pos)))
 
         return result

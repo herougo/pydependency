@@ -13,3 +13,5 @@ A repo (and sublime plugin) for automatically extracting missing python depencie
 - [ ] Detect and account for specific python indentation pattern (ie tab, spaces, 4 spaces, etc)
 - [ ] Transform relative imports into absolute
 - [ ] Transform import * into specific relative import
+- [ ] Edge cases:
+  - [ ] global variables used as default function parameter values

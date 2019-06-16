@@ -64,14 +64,17 @@ class CodeFile:
             yield x
 
     def get_global_names(self):
+        # REFACTOR
         return {
-            'classes': list(sorted(iter(self.iter_global_class_names()))),
-            'functions': list(sorted(iter(self.iter_global_func_names()))),
-            'variables': list(sorted(iter(self.iter_global_var_names())))
+            'classes': list(sorted(iter(self.iter_global_class_names()), key=lambda x: x.name)),
+            'functions': list(sorted(iter(self.iter_global_func_names()), key=lambda x: x.name)),
+            'variables': list(sorted(iter(self.iter_global_var_names()), key=lambda x: x.name))
         }
 
     def iter_undefined_names(self):
-        raise NotImplementedError()
+        # REFACTOR: consistent interface
+        for name, start_pos, end_pos in self._tree.get_undefined_used_names():
+            yield name, start_pos, end_pos
 
     def save(self):
         new_code = '\n'.join([str(segment) for segment in self._segmentation])
