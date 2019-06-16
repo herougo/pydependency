@@ -1,31 +1,19 @@
 import os
 from pydependency.utils import get_folder_paths, load_json_if_exists, file_to_lines
 from pydependency.code_repo import CodeRepo
+from pydependency.config_processing import ConfigProcessor
+from pydependency.parse_tree import AbsoluteImportWrapper, RelativeImportWrapper
 
 class DependencyFinder:
     '''
-    config_folder folder structure:
-    - code_repos/<folder>: folders representing repos
-    - default.json (names go through this first when resolving dependencies; if there
-      it is in there, use that; otherwise, try everywhere else)
-    - packages.txt (contains package names (e.g. 'os'))
-
-    TODO:
-    Integrate current repo
     Refactor getitem
     '''
     def __init__(self, config_folder):
         self._config_folder = config_folder
         self._current_repo_name = None
-        if not os.path.exists(config_folder):
-            os.makedirs(config_folder)
-        self._config_code_repo_path = os.path.join(config_folder, 'code_repos')
-        config_code_repo_dirs = [f for f in os.listdir(self._config_code_repo_path)
-                                 if os.path.isdir(os.path.join(config_folder, f))]
-        self._code_repos = {f: CodeRepo(os.path.join(self._config_code_repo_path, f))
-                            for f in config_code_repo_dirs}
-        self._default_map = load_json_if_exists(os.path.join(config_folder, 'default.json'))
-        self._packages = file_to_lines(os.path.join(config_folder, 'packages.txt'))
+        self._code_repos = ConfigProcessor.load_code_repo_config()
+        self._config_absolute_import_mapping = ConfigProcessor.read_absolute_mappings()
+        self._config_relative_import_mapping = ConfigProcessor.read_relative_mappings()
 
     def add_repo(self, repo_path):
         base_name = os.path.basename(repo_path)
@@ -46,20 +34,54 @@ class DependencyFinder:
 
         self._current_repo_name = base_name
 
-    def migrate_to_default(self, python_file_path):
-        # ?????
-        pass
-
-    def __getitem__(self, item):
-        split = item.split('.')
+    def __getitem__(self, name):
+        '''
+        Resolve dependency
+        :param name: str
+        :return: list of ImportWrapper objects corresponding to the recommended import statement(s)
+        '''
+        split = name.split('.')
         if len(split) > 1:
-            if split[0] in self._packages:
-                return AbsoluteImport(split[0])
-            # (try current repo)
+            # try absolute import default
+            import_location = self._config_relative_import_mapping.get(name)
+            if import_location is not None:
+                as_name = None if name == import_location else name
+                return [AbsoluteImportWrapper(import_location, as_name=as_name)]
+
+            # try current repo
+            if self._current_repo_name is not None:
+                import_wrappers = self._code_repos[self._current_repo_name].get_absolute_import_dependencies(name)
+                if len(import_wrappers) > 0:
+                    return import_wrappers
+
+            # try other repos
+            import_wrappers = []
+            for repo_name, code_repo in self._code_repos.items():
+                if repo_name != self._current_repo_name:
+                    import_wrappers.extend(code_repo.get_absolute_import_dependencies(name))
+
+            return import_wrappers
+
         else:
-            yo = self._default_map.get(item)
-            # (try current repo)
-            # (try self._code_repos)
+            # try relative import default
+            default_lookup = self._config_relative_import_mapping.get(name)
+            if default_lookup is not None:
+                import_name, import_location = default_lookup
+                return [RelativeImportWrapper(import_location, [import_name])]
+
+            # try current repo
+            if self._current_repo_name is not None:
+                import_wrappers = self._code_repos[self._current_repo_name].get_relative_import_dependencies(name)
+                if len(import_wrappers) > 0:
+                    return import_wrappers
+
+            # try other repos
+            import_wrappers = []
+            for repo_name, code_repo in self._code_repos.items():
+                if repo_name != self._current_repo_name:
+                    import_wrappers.extend(code_repo.get_relative_import_dependencies(name))
+
+            return import_wrappers
 
     def transform_import_star(self, import_str):
         # ????

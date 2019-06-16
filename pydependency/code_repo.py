@@ -101,7 +101,8 @@ class CodeRepo:
         #self._code_files = [CodeFile(file_path) for file_path in file_paths]
         # keys are folder_names and leaf values are CodeFile objects
         self._name_map = self._build_name_map()
-        self._relative_import_map = self._build_relative_import_map()
+        self._relative_import_map = self._build_relative_import_map(self._name_map)
+        self._absolute_import_set = self._build_absolute_import_set()
 
     @property
     def repo_name(self):
@@ -117,6 +118,10 @@ class CodeRepo:
         return result
 
     def _build_name_map(self):
+        '''
+        Builds a map that can be used to acces the CodeFiles of the repo (e.g. result['pydependency']['code_repo.py'])
+        :return: dict mapping folder_name -> (dict of the same form or CodeFile object)
+        '''
         result = {}
 
         def _build_name_map_recursion(folder_path, d):
@@ -135,7 +140,11 @@ class CodeRepo:
 
         return result
 
-    def _build_relative_import_map(self):
+    def _build_relative_import_map(self, name_map):
+        '''
+        :param name_map: self._name_map
+        :return: dict mapping name -> list of import_location values (ie 'keras.layers')
+        '''
         result = collections.defaultdict(list)
 
         def _build_map_recursion(prefix_list, node):
@@ -150,7 +159,21 @@ class CodeRepo:
                 for name in node.iter_names():
                     self._relative_import_map[name].append(prefix)
 
-        _build_map_recursion([], result)
+        _build_map_recursion([], name_map)
+
+        return result
+
+    def _build_absolute_import_set(self):
+        result = set()
+        for f in os.listdir(self._folder_path):
+            path = os.path.join(self._folder_path, f)
+            if os.path.isdir(path):
+                dir_name = os.path.basename(path)
+                if os.path.isfile(os.path.join(path, '__init__.py')):
+                    result.add(dir_name)
+            elif os.path.isfile(path) and path.endswith('.py'):
+                name = f[:-3]
+                result.add(name)
 
         return result
 
@@ -168,28 +191,40 @@ class CodeRepo:
                     yield '{}.{}'.format(prefix, name)
         _iter_names_recursion([], self._name_map)
 
-    def iter_class_names(self):
-        # iter_classdefs
-        self._iter_names('iter_class_names')
+    def iter_global_class_names(self):
+        self._iter_names('iter_global_class_names')
 
-    def iter_function_names(self):
-        # iter_funcdefs
-        self._iter_names('iter_function_names')
+    def iter_global_func_names(self):
+        self._iter_names('iter_global_func_names')
 
     def iter_global_var_names(self):
         self._iter_names('iter_global_var_names')
 
-    def iter_imports(self):
-        # iter_imports
-        pass
+    def iter_global_import(self):
+        self._iter_names('iter_global_import')
 
     def get_relative_import_dependencies(self, name):
         '''
-        Input: name of a directory or name in the repo_path
-        Output: relative import statements from the repo which can load this name
-        Example: 'path' -> ['from os import path']
+        Determine relative import dependencies for name.
+        :param name: str name of a directory or name in the repo_path
+        :return: list of RelativeImportWrappers of relative import statements from the repo which can load this name
+        Example: 'path' -> list  with RelativeImportWrapper for 'from os import path'
         '''
-        self._relative_import_map[name]
+        return [RelativeImportWrapper(import_location=import_location, names=[name])
+                for import_location in self._relative_import_map.get(name, [])]
+
+    def get_absolute_import_dependencies(self, name):
+        '''
+        Determine absolute import dependencies for name.
+        :param name: str name of a directory or name in the repo_path
+        :return: list of AbsoluteImportWrappers of absolute import statements from the repo which can load this name
+        Example: 'path' -> list  with AbsoluteImportWrapper for 'from os import path'
+        '''
+        prefix = name.split('.')[0]
+        return [AbsoluteImportWrapper(import_location=import_location)
+                for import_location in self._absolute_import_set
+                if import_location.split('.')[0] == prefix]
+
 
     def transform_import_star(self, import_str):
         # ????

@@ -1,9 +1,11 @@
 import os
 import warnings
 from pydependency.utils import GIT_REPO_PATH, file_to_lines
-from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper, RelativeImportWrapper
+from pydependency.parse_tree import ParseTreeWrapper, AbsoluteImportWrapper
+from pydependency.code_repo import CodeRepo
 
 CONFIG_PATH = os.path.join(GIT_REPO_PATH, 'config')
+CONFIG_CODE_REPOS_PATH = os.path.join(CONFIG_PATH, 'code_repos')
 _CONFIG_IMPORT_MAPPINGS_PATH = os.path.join(CONFIG_PATH, 'default_import_mappings')
 CONFIG_ABSOLUTE_IMPORT_MAPPINGS_PATH = os.path.join(_CONFIG_IMPORT_MAPPINGS_PATH, 'absolute')
 CONFIG_RELATIVE_IMPORT_MAPPINGS_PATH = os.path.join(_CONFIG_IMPORT_MAPPINGS_PATH, 'relative')
@@ -12,7 +14,14 @@ CONFIG_MIGRATE_FROM_PATH = os.path.join(CONFIG_PATH, 'migrate_from')
 
 class ConfigProcessor:
     '''
-
+    config_folder folder structure:
+    - code_repos/<folder>: folders representing understood repos
+    - default_import_mappings: folder containing where to check first to resolve dependencies
+      - absolute: folder with absolute import mappings
+      - relative: folder with relative import mappings
+    - migrate_from: folder with python files which can be used to migrate to mapping files in the
+      default_import_mappings folder structure
+    Note: if a file is in an ignored folder, it will not be used by ConfigProcessor
     '''
     @classmethod
     def _tsv_to_matrix(cls, path):
@@ -99,4 +108,15 @@ class ConfigProcessor:
                             if name in relative_import_mapping.keys():
                                 warnings.warn('Naming conflict from {} with name {} from {}'.format(
                                     f, imp.used_name, str(imp)))
-                            relative_import_mapping[name] = imp.import_location
+                            relative_import_mapping[name] = (name, imp.import_location)
+
+    @classmethod
+    def load_code_repo_config(cls):
+        '''
+        :return: dict mapping repo_name -> CodeRepo object
+        '''
+        config_code_repo_dirs = [f for f in os.listdir(CONFIG_CODE_REPOS_PATH)
+                                 if os.path.isdir(os.path.join(CONFIG_CODE_REPOS_PATH, f))]
+        code_repos_map = {f: CodeRepo(os.path.join(CONFIG_CODE_REPOS_PATH, f))
+                          for f in config_code_repo_dirs}
+        return code_repos_map
