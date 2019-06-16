@@ -6,19 +6,19 @@ from pydependency.code_repo import CodeRepo
 
 CONFIG_PATH = os.path.join(GIT_REPO_PATH, 'config')
 CONFIG_CODE_REPOS_PATH = os.path.join(CONFIG_PATH, 'code_repos')
-_CONFIG_IMPORT_MAPPINGS_PATH = os.path.join(CONFIG_PATH, 'default_import_mappings')
-CONFIG_ABSOLUTE_IMPORT_MAPPINGS_PATH = os.path.join(_CONFIG_IMPORT_MAPPINGS_PATH, 'absolute')
-CONFIG_RELATIVE_IMPORT_MAPPINGS_PATH = os.path.join(_CONFIG_IMPORT_MAPPINGS_PATH, 'relative')
+CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH = os.path.join(CONFIG_PATH, 'default_import_mappings')
 CONFIG_MIGRATE_FROM_PATH = os.path.join(CONFIG_PATH, 'migrate_from')
+ABSOLUTE_PREFIX = 'absolute_'
+RELATIVE_PREFIX = 'relative_'
 
 
 class ConfigProcessor:
     '''
     config_folder folder structure:
     - code_repos/<folder>: folders representing understood repos
-    - default_import_mappings: folder containing where to check first to resolve dependencies
-      - absolute: folder with absolute import mappings
-      - relative: folder with relative import mappings
+    - (READ ONLY) default_import_mappings: folder containing where to check first to resolve dependencies
+      - files starting with 'absolute_': absolute import mappings
+      - files starting with 'relative': relative import mappings
     - migrate_from: folder with python files which can be used to migrate to mapping files in the
       default_import_mappings folder structure
     Note: if a file is in an ignored folder, it will not be used by ConfigProcessor
@@ -35,10 +35,10 @@ class ConfigProcessor:
             f.write(text)
 
     @classmethod
-    def _iter_used_tsv_rows(cls, path):
-        for f in os.listdir(path):
+    def _iter_used_tsv_rows(cls, prefix):
+        for f in os.listdir(CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH):
             path = os.path.join(path, f)
-            if os.path.isfile(path) and f.endswith('.tsv'):
+            if os.path.isfile(path) and f.endswith('.tsv') and f.startswith(prefix):
                 matrix = cls._tsv_to_matrix(path)
                 for row in matrix:
                     yield f, row
@@ -49,7 +49,7 @@ class ConfigProcessor:
         :return: dict mapping used_name -> (import_name, import_location)
         '''
         mapping = {}
-        for f, row in ConfigProcessor._iter_used_tsv_rows(CONFIG_RELATIVE_IMPORT_MAPPINGS_PATH):
+        for f, row in ConfigProcessor._iter_used_tsv_rows(RELATIVE_PREFIX):
             if len(row) == 3 and row[0].strip() != '': # as case
                 as_name, original_name, import_location = row
                 mapping[as_name] = (original_name, import_location)
@@ -66,7 +66,7 @@ class ConfigProcessor:
         :return: dict mapping used_name -> import_location
         '''
         mapping = {}
-        for f, row in ConfigProcessor._iter_used_tsv_rows(CONFIG_ABSOLUTE_IMPORT_MAPPINGS_PATH):
+        for f, row in ConfigProcessor._iter_used_tsv_rows(ABSOLUTE_PREFIX):
             if len(row) == 2 and row[0].strip() != '':  # as case
                 as_name, import_location = row
                 mapping[as_name] = import_location
@@ -90,25 +90,55 @@ class ConfigProcessor:
         cls._matrix_to_tsv(matrix, path)
 
     @classmethod
+    def _append_to_mappings_with_file(cls, relative_import_mapping, absolute_import_mapping, path, f):
+        tree = ParseTreeWrapper(file_path=path, need_unused_names=False)
+        for imp in tree.iter_global_import():
+            if isinstance(imp, AbsoluteImportWrapper):
+                if imp.used_name in absolute_import_mapping.keys():
+                    warnings.warn('Naming conflict from {} with name {} from {}'.format(
+                        f, imp.used_name, str(imp)))
+                absolute_import_mapping[imp.used_name.strip()] = imp.import_location.strip()
+            else:
+                for name in imp.names:
+                    if name in relative_import_mapping.keys():
+                        warnings.warn('Naming conflict from {} with name {} from {}'.format(
+                            f, imp.used_name, str(imp)))
+                    relative_import_mapping[name.strip()] = (name.strip(), imp.import_location.strip())
+
+    @classmethod
     def build_migrate_from_mappings(cls):
         relative_import_mapping = {}
         absolute_import_mapping = {}
         for f in os.listdir(CONFIG_MIGRATE_FROM_PATH):
             path = os.path.join(CONFIG_MIGRATE_FROM_PATH, f)
             if os.path.isfile(path) and f.endswith('.py'):
-                tree = ParseTreeWrapper(file_path=path, need_unused_names=False)
-                for imp in tree.iter_global_import():
-                    if isinstance(imp, AbsoluteImportWrapper):
-                        if imp.used_name in absolute_import_mapping.keys():
-                            warnings.warn('Naming conflict from {} with name {} from {}'.format(
-                                f, imp.used_name, str(imp)))
-                        absolute_import_mapping[imp.used_name] = imp.import_location
-                    else:
-                        for name in imp.names:
-                            if name in relative_import_mapping.keys():
-                                warnings.warn('Naming conflict from {} with name {} from {}'.format(
-                                    f, imp.used_name, str(imp)))
-                            relative_import_mapping[name] = (name, imp.import_location)
+                cls._append_to_mappings_with_file(cls, relative_import_mapping, absolute_import_mapping, path, f)
+
+        return relative_import_mapping, absolute_import_mapping
+
+    @classmethod
+    def migrate_all(cls):
+        '''
+        Migrate everything from 'migrate_from' directory to 'default_import_mappings' on a file by file basis.
+        Example: migrate_from/basic.py
+                  -> default_import_mappings/relative_basic.tsv and default_import_mappings/absolute_basic.tsv
+        '''
+        for f in os.listdir(CONFIG_MIGRATE_FROM_PATH):
+            path = os.path.join(CONFIG_MIGRATE_FROM_PATH, f)
+            if os.path.isfile(path) and f.endswith('.py'):
+                name = f[:-3]
+                relative_import_mapping = {}
+                absolute_import_mapping = {}
+                cls._append_to_mappings_with_file(relative_import_mapping, absolute_import_mapping, path, f)
+                if len(absolute_import_mapping) > 0:
+                    ConfigProcessor.write_absolute_mappings(
+                        absolute_import_mapping, path=os.path.join(CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH,
+                                                                   '{}{}.tsv'.format(ABSOLUTE_PREFIX, name)))
+                if len(relative_import_mapping) > 0:
+                    ConfigProcessor.write_relative_mappings(
+                        relative_import_mapping, path=os.path.join(CONFIG_DEFAULT_IMPORT_MAPPINGS_PATH,
+                                                                   '{}{}.tsv'.format(RELATIVE_PREFIX, name)))
+
 
     @classmethod
     def load_code_repo_config(cls):

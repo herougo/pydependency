@@ -1,6 +1,12 @@
 from pydependency.code_repo import CodeRepo, CodeFile
 from tests.utils import GIT_REPO_PATH, iter_example_files
 
+
+
+cr = CodeRepo('not_created_yet', GIT_REPO_PATH)
+
+print()
+
 for path in iter_example_files():
     expected_undefined_names = 'do_stuff yu ClassNotDefinedYet other_function_not_defined_yet i.dont.exist'.split()
 
@@ -10,7 +16,3 @@ for path in iter_example_files():
     undefined_names = [x[0] for x in undefined_name_data]
     assert undefined_names == expected_undefined_names
     print()
-
-cr = CodeRepo('not_created_yet', GIT_REPO_PATH)
-
-print()

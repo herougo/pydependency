@@ -89,6 +89,15 @@ elif isinstance(node, parso.python.tree.ImportName):
     yield (import_location, node.start_pos, node.end_pos)
 '''
 
+def get_parso_nodes_right_of(nodes: list, right_of_predicate):
+    for j in range(len(nodes)):
+        if right_of_predicate(nodes[j]):
+            return nodes[j + 1:]
+    return []
+
+def is_as_operator(node):
+    return isinstance(node, parso.python.tree.Keyword) and node.value == 'as'
+
 class NodeWrapper:
     name = None
     start_pos = None
@@ -131,8 +140,15 @@ class ImportWrapper(NodeWrapper):
             return RelativeImportWrapper(import_location, names, original_code_string, start_pos, end_pos)
         elif isinstance(node, parso.python.tree.ImportName):
             dotted_name_node = node.children[1]
-            import_location = dotted_name_node.get_code()
-            return AbsoluteImportWrapper(import_location, original_code_string, start_pos, end_pos, as_name)
+            if isinstance(dotted_name_node, parso.python.tree.PythonNode) and dotted_name_node.type == 'dotted_as_name':
+                as_name_nodes = get_parso_nodes_right_of(dotted_name_node.children, is_as_operator)
+                assert len(as_name_nodes) == 1, (node, as_name_nodes)
+                import_location = dotted_name_node.children[0].get_code()
+                as_name = as_name_nodes[0].value
+            else:
+                import_location = dotted_name_node.get_code()
+                as_name = None
+            return AbsoluteImportWrapper(import_location, original_code_string, start_pos, end_pos, as_name=as_name)
         else:
             raise NotImplementedError()
 
@@ -158,7 +174,7 @@ class AbsoluteImportWrapper(ImportWrapper):
 
     @property
     def used_name(self):
-        return self._as_name if self._as_name is None else self._import_location
+        return self._as_name if self._as_name is not None else self._import_location
 
     def __str__(self):
         suffix = '' if self._as_name is None else ' as {}'.format(self._as_name)

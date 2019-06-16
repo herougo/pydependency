@@ -12,6 +12,7 @@ A repo (and sublime plugin) for automatically extracting missing python depencie
 - [ ] Finish Sublime Text plugin
 - [ ] Work on plugin Performance
 - [ ] Finish PyCharm plugin
+- [ ] Formal unit tests
 - [ ] Edge cases:
   - [ ] as keyword in relative imports
   - [ ] Look for 'import keras.layers' when looking up default dependencies (currently only considers first

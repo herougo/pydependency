@@ -1,15 +1,12 @@
 import os
 from pydependency.utils import get_folder_paths, load_json_if_exists, file_to_lines
 from pydependency.code_repo import CodeRepo
-from pydependency.config_processing import ConfigProcessor
+from pydependency.config_processing import ConfigProcessor, GIT_REPO_PATH
 from pydependency.parse_tree import AbsoluteImportWrapper, RelativeImportWrapper
 
 class DependencyFinder:
-    '''
-    Refactor getitem
-    '''
-    def __init__(self, config_folder):
-        self._config_folder = config_folder
+    def __init__(self):
+        self._config_folder = GIT_REPO_PATH
         self._current_repo_name = None
         self._code_repos = ConfigProcessor.load_code_repo_config()
         self._config_absolute_import_mapping = ConfigProcessor.read_absolute_mappings()

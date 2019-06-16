@@ -21,14 +21,6 @@ used_imported_variables = [
 
 '''
 
-'''
-from pydependency.dependency_finder import DependencyFinder
-from pydependency.utils import *
-df = DependencyFinder('/Users/hromel/dependency_finder')
-df.set_current_repo(file_to_repo_path(current_file_path))
-df['functions.low_detail_search.main']
-'''
-
 from pydependency.parse_tree import ParseTreeWrapper
 from tests.utils import iter_example_files
 

@@ -1,5 +1,5 @@
 import argparse
-from pydependency.config_processing import ConfigProcessor, CONFIG_MIGRATE_FROM_PATH
+from pydependency.config_processing import ConfigProcessor
 
 
 def get_args():
@@ -12,7 +12,7 @@ def get_args():
 
 if __name__ == '__main__':
     absolute_import_output_path, relative_import_output_path = get_args()
-    absolute_import_mapping, relative_import_mapping = ConfigProcessor.build_migrate_from_mappings()
+    relative_import_mapping, absolute_import_mapping = ConfigProcessor.build_migrate_from_mappings()
     ConfigProcessor.write_absolute_mappings(absolute_import_mapping, absolute_import_output_path)
     ConfigProcessor.write_relative_mappings(relative_import_mapping, relative_import_output_path)
     print('Done!')

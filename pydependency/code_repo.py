@@ -108,15 +108,6 @@ class CodeRepo:
     def repo_name(self):
         return os.path.basename(self._folder_path)
 
-    def _get_python_file_paths_old(self):
-        result = []
-        for paths, subdirs, files in os.walk(self._folder_path):
-            for file in files:
-                if file.endswith('.py'):
-                    pure_path = os.path.join(paths, file)
-                    result.append(pure_path)
-        return result
-
     def _build_name_map(self):
         '''
         Builds a map that can be used to acces the CodeFiles of the repo (e.g. result['pydependency']['code_repo.py'])
