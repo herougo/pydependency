@@ -1,4 +1,6 @@
 import parso
+import jedi
+import warnings
 
 RECURSIVE_GLOBAL_IMPORT_IGNORE = (
     parso.python.tree.Function,
@@ -216,7 +218,9 @@ class ParseTreeWrapper:
         self._file_path = file_path
         with open(file_path) as f:
             code = str(f.read())
-        self._tree = parso.parse(code, version=version)
+        self._jedi_interpreter = jedi.api.Interpreter(code, [{}])
+        self._tree = self._jedi_interpreter._module_node
+        # self._tree = parso.parse(code, version=version)
 
     @classmethod
     def _recursive_iter_nodes(cls, node, look_for, ignore, depth=0):
@@ -265,3 +269,83 @@ class ParseTreeWrapper:
                 assert not (isinstance(child, parso.python.tree.Operator) and child.value == ',')  # e.g. import os, sys
 
             yield ImportWrapper.from_parso_node(node)
+
+    def get_used_names(self):
+        # REFACTOR: Keep output consistent with NodeWrapper?
+        warnings.warn('This code is experimental')
+        names = []
+
+        def recursive_step(n):
+            if hasattr(n, 'children'):
+                ignore = set()
+                # ignore import statements
+                if any([isinstance(n2, parso.python.tree.Keyword) and n2.value == 'import' for n2 in n.children]):
+                    return
+
+                # ignore function/class definitions
+                if isinstance(n, parso.python.tree.Class) and n.type == 'classdef':
+                    ignore.add(0)
+                    ignore.add(1)
+
+                if isinstance(n, parso.python.tree.Function) and n.type == 'funcdef':
+                    ignore.add(0)
+                    ignore.add(1)
+
+                    # ignore function parameters
+                    return
+
+                # ignore assignments
+                i = 0
+                while i < len(n.children):
+                    if isinstance(n.children[i], parso.python.tree.Operator) and n.children[i].value == '=':
+                        break
+                    i += 1
+                if i >= len(n.children):
+                    i = 0
+
+                # otherwise
+                for j in range(i, len(n.children)):
+                    if j not in ignore:
+                        recursive_step(n.children[j])
+            else:
+                if isinstance(n, parso.python.tree.Name):
+                    # ignore attributes
+                    prev_sibling = n.get_previous_sibling()
+                    if isinstance(prev_sibling, parso.python.tree.Operator) and prev_sibling.value == '.':
+                        return
+
+                    # get full dotted name
+                    sibling = n
+                    name_parts = [n.value]
+                    end_pos = n.end_pos
+                    while True:  # has attributes
+                        sibling = sibling.get_next_sibling()
+
+                        if not (isinstance(sibling, parso.python.tree.PythonNode) and sibling.type == 'trailer'):
+                            break
+
+                        n0 = sibling.children[0]
+                        n1 = sibling.children[1]
+                        if (isinstance(n0, parso.python.tree.Operator) and n0.value == '.' and
+                                isinstance(n1, parso.python.tree.Name)):
+                            name_parts.extend([n1.value])
+                            end_pos = n1.end_pos
+
+                    names.append(('.'.join(name_parts), n.start_pos, end_pos))
+
+        recursive_step(self._tree)
+
+        return names
+
+    def get_undefined_used_names(self):
+        # REFACTOR: Keep output consistent with NodeWrapper?
+        result = []
+
+        names = self.get_used_names()
+        for name, start_pos, end_pos in names:
+            self._jedi_interpreter._pos = start_pos
+            completions = [c._name.string_name for c in self._jedi_interpreter.completions()]
+            if name.split('.')[0] not in completions:
+                result.append((name, start_pos, end_pos))
+
+        return result
