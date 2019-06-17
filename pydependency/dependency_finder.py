@@ -25,9 +25,10 @@ class DependencyFinder:
             code_repo = CodeRepo.load_from_repo_path(repo_path)
             self._code_repos[base_name] = code_repo
             code_repo.save_config()
+            return True
         else:
             # REFACTOR: Ignored for now
-            pass
+            return False
 
     def set_current_repo(self, repo_path):
         assert repo_path is not None
@@ -126,7 +127,7 @@ class DependencyFinder:
             lines.append("'''")
         if len(lines) > 0:
             lines.append('# HEADER END')
-        return '\n'.join(lines)
+        return '\n'.join(lines) + '\n'
 
     def transform_import_star(self, import_str):
         # ????

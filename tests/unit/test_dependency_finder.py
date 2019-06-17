@@ -5,7 +5,7 @@ from pydependency.utils import *
 
 df = DependencyFinder()
 path = '/home/henri/Documents/Git/jedi/jedi'
-df.set_current_repo(file_to_repo_path(path))
+df.set_current_repo(get_repo_path(path))
 
 script_lookup = df['Script']
 sorted_definitions_lookup = df['jedi.api.helpers.sorted_definitions']

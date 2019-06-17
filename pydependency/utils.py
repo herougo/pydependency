@@ -24,16 +24,21 @@ def file_to_lines(file_path):
     return lines
 
 
-def file_to_repo_path(file_path):
-    folder_path = os.path.abspath(os.path.join(file_path, os.pardir))
+def get_repo_path(file_path):
+    if os.path.isfile(file_path):
+        folder_path = os.path.abspath(os.path.join(file_path, os.pardir))
+    else:
+        folder_path = file_path
     for i in range(100):
         if folder_path == '/':
             return None
-        if '.git' in os.listdir(folder_path):
+        if is_repo_path(folder_path):
             break
         folder_path = os.path.abspath(os.path.join(folder_path, os.pardir))
     return folder_path
 
+def is_repo_path(path):
+    return os.path.isdir(path) and '.git' in os.listdir(path)
 
 class LineNumberTracker:
     '''
