@@ -158,6 +158,26 @@ class ImportWrapper(NodeWrapper):
         else:
             raise NotImplementedError()
 
+    @classmethod
+    def merge(cls, list_of_imports):
+        absolute_import_location_set = set()
+        relative_import_location_map = {}
+        result = []
+        for imp in list_of_imports:
+            if isinstance(imp, AbsoluteImportWrapper):
+                if imp.import_location not in absolute_import_location_set:
+                    result.append(imp)
+            else:
+                if imp.import_location in relative_import_location_map.keys():
+                    existing_imp = relative_import_location_map[imp.import_location]
+                    for name in imp.names:
+                        existing_imp.add_name(name)
+                else:
+                    relative_import_location_map[imp.import_location] = imp
+                    result.append(imp)
+        return result
+
+
     def __str__(self):
         raise NotImplementedError()
 
@@ -205,8 +225,8 @@ class RelativeImportWrapper(ImportWrapper):
         return self._import_location
 
     def __str__(self):
-        # ??? Comment
-        # ??? Replicate existing format
+        # ??? Handle Comments
+        # ??? Replicate existing format (ie spacing)
         expected_prefix_len = len(self._import_location) + 13
         expected_normal_suffix_len = sum([len(name) for name in self._names]) + 2 * (len(self._names) - 1)
         if expected_prefix_len + expected_normal_suffix_len <= MAX_LINE_LEN:
@@ -249,7 +269,7 @@ class RelativeImportWrapper(ImportWrapper):
 
     def add_name(self, name):
         if name in self._names:
-            raise ValueError('Name {} already exists in {}'.format(name, self._names))
+            return
         self._names.append(name)
 
 
@@ -384,6 +404,7 @@ class ParseTreeWrapper:
 
     def get_undefined_used_names(self):
         # REFACTOR: Keep output consistent with NodeWrapper?
+        assert self._jedi_interpreter is not None
         result = []
 
         names = self.get_used_names()

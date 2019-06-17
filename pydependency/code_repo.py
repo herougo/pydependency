@@ -8,9 +8,9 @@ class CodeFile:
     '''
     WARNING: start_pos and end_pos are not reliable if you modified the file.
     '''
-    def __init__(self, file_path):
+    def __init__(self, file_path, need_unused_names=False):
         self._file_path = file_path
-        self._tree = ParseTreeWrapper(file_path, need_unused_names=False)
+        self._tree = ParseTreeWrapper(file_path, need_unused_names=need_unused_names)
         self._line_number_tracker = LineNumberTracker()
 
         # self._segmentation contains lines and import classes
