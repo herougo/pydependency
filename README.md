@@ -48,3 +48,4 @@ How to use this repository as a Sublime plugin.
 - [ ] Transform import * into specific relative import
 - [ ] Finish PyCharm plugin
 - [ ] Formal unit tests
+- [ ] Investigate Pylint as alternative
