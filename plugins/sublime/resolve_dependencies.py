@@ -6,7 +6,7 @@ import urllib.parse
 def file_path_to_header(file_path):
     data = {'file_path': file_path}
     to_send = urllib.parse.urlencode(data).encode('ascii')
-    res = urllib.request.urlopen('http://localhost:5001/', data=to_send)
+    res = urllib.request.urlopen('http://localhost:6778/', data=to_send)
     return res.read().decode('ascii')
 
 class DependencyFindCommand(sublime_plugin.TextCommand):

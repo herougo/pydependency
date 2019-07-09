@@ -115,7 +115,8 @@ class ConfigProcessor:
     @classmethod
     def migrate_all(cls):
         '''
-        Migrate everything from 'migrate_from' directory to 'default_import_mappings' on a file by file basis.
+        Migrate everything from 'migrate_from' directory to 'default_import_mappings' on a file by file basis
+        (Ignores everything in the ignored folder).
         Example: migrate_from/basic.py
                   -> default_import_mappings/relative_basic.tsv and default_import_mappings/absolute_basic.tsv
         '''
