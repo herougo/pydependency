@@ -2,9 +2,9 @@
 
 A repo (and sublime plugin) for automatically extracting missing python depencies.
 
-# Sublime Package Usage
+# Sublime Plugin Usage
 
-How to use this repository
+How to use this repository as a Sublime plugin.
 
 1. Clone the repository
 2. Install requirements in requirements.txt
@@ -13,7 +13,8 @@ How to use this repository
 4. From the root directory of the repo, run `PYTHONPATH="." FLASK_APP=app/app.py flask run -p 6778` to run the project as a flask server app.
 5. Add `plugins/sublime/resolve_dependencies.py` as a Sublime plugin (copy the file to the ....)
 6. Add a keyboard shortcut for the plugin ......
-7. Run the keyboard shortcut and that's it!
+7. Run the keyboard shortcut and try running it.
+- Check .... to make sure there are no errors.
 
 # How Dependency Recommendation Works
 
