@@ -1,16 +1,18 @@
 import sublime
 import sublime_plugin
-import os
-from pydependency.dependency_finder import DependencyFinder
+import urllib
+import urllib.parse
 
-
-df = DependencyFinder()
-
+def file_path_to_header(file_path):
+    data = {'file_path': file_path}
+    to_send = urllib.parse.urlencode(data).encode('ascii')
+    res = urllib.request.urlopen('http://localhost:5001/', data=to_send)
+    return res.read().decode('ascii')
 
 class DependencyFindCommand(sublime_plugin.TextCommand):
     def run(self, edit):
-        df.set_current_file(self.view.file_name())
-        header = df.extract_missing_dependency_header()
         top_region = sublime.Region(0, 0)
         # add header to top
+        file_path = self.view.file_name()
+        header = file_path_to_header(file_path)
         self.view.replace(edit, top_region, header)
