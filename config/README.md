@@ -26,12 +26,10 @@ Note: if a file is in an ignored folder, it will not be used in migration
 
   - **config.json**: contains generic config information like the absolute path to the source repository
   - **absolute_import_set.json**: a json list of names for the repository where you're allowed to absolute import
-  
     - e.g. for the numpy library, this list would contain `"numpy"` since you can do `import numpy`.
-  
   - **relative_import_map.json**: dict mapping names (you can relatively import from the repo) to a list of relative python file paths containing that importable name.
-  
     - e.g. if `"module_not_exists": ["test.completion.usages.py"]` is in the dictionary, that means you can do `from test.completion.usages import module_not_exists`
+    - if a dictionary maps a name to more than one file, you can modify this to use the one file you want.
 
 ### Adding Code Repos
 
