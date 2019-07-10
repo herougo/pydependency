@@ -1,0 +1,3 @@
+jedi==0.13.3
+parso==0.4.0
+flask

@@ -47,7 +47,7 @@ Note: if a file is in an ignored folder, it will not be used in migration
 1. Add a python file(s) into the `config/migrate_from` folder.
 2. (Optional) move undesired python files to the ignored folder.
 3. Run `scripts/migrate_all.py`.
-  - This will look at all python files in`config/migrate_from` (except those in the ignored folder), and generate relative and absolute mapping files in `config/default_import_mappings`.
-  - e.g. `config/migrate_from/built_in.py` will result in generating:
-    - `config/default_import_mappings/relative_built_in.tsv`
-    - `config/default_import_mappings/absolute_built_in.tsv`
+    - This will look at all python files in`config/migrate_from` (except those in the ignored folder), and generate relative and absolute mapping files in `config/default_import_mappings`.
+    - e.g. `config/migrate_from/built_in.py` will result in generating:
+      - `config/default_import_mappings/relative_built_in.tsv`
+      - `config/default_import_mappings/absolute_built_in.tsv`

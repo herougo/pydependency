@@ -4,17 +4,18 @@ A repo (and sublime plugin) for automatically extracting missing python depencie
 
 # Sublime Plugin Usage
 
-How to use this repository as a Sublime plugin.
+How to use this repository as a Sublime plugin (on a Mac).
 
 1. Clone the repository
 2. Install requirements in requirements.txt
 3. Run `python scripts/add_repo.py path/to/repo` to add a repo for which you want pydependency to recognize dependencies (the path is the folder containing the .git file).
   If you have a folder containing multiple git repo folders, you can run `python scripts/add_repo_collection.py path/to/folder_of_repos` to add all the repos in that folder (it will ignore folders not directly containing a .git file).
-4. From the root directory of the repo, run `PYTHONPATH="." FLASK_APP=app/app.py flask run -p 6778` to run the project as a flask server app.
-5. Add `plugins/sublime/resolve_dependencies.py` as a Sublime plugin (copy the file to the ....)
-6. Add a keyboard shortcut for the plugin ......
+4. From the root directory of the repo, run `./run_app.sh` to run the project as a flask server app.
+5. Add `plugins/sublime/resolve_dependencies.py` as a Sublime plugin (copy the file to the Users folder after clicking `Preferences > Browse Packages`)
+6. Add a keyboard shortcut for the plugin (Click `Preferences > Key Bindings - User` and paste this line: 
+   - `{ "keys": ["ctrl+9"], "command": "dependency_find" }`) 
 7. Run the keyboard shortcut and try running it.
-- Check .... to make sure there are no errors.
+   - Check the Sublime console (Cmd + \`) to make sure there are no errors.
 
 # How Dependency Recommendation Works
 
